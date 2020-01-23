@@ -60,9 +60,7 @@ merge_rankings
 merge_specific_rankings
 pipeline
 rank_features
+select_representative_features
 write_subset
 ``` 
-
-
-
 
