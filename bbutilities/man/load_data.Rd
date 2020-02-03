@@ -2,7 +2,7 @@
 % Please edit documentation in R/feature_selection_utilities.R
 \name{load_data}
 \alias{load_data}
-\title{Load data}
+\title{Load data (from brain biomarker challenge files)}
 \usage{
 load_data(filenames, drop.zeros = FALSE)
 }
@@ -15,5 +15,5 @@ load_data(filenames, drop.zeros = FALSE)
 list(df, feature_names). df$type, df$outcome, df$gene1, df$gene2, etc.
 }
 \description{
-Load data
+Load data (from brain biomarker challenge files)
 }

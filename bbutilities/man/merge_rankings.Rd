@@ -9,7 +9,7 @@ merge_rankings(rankings, modality = c("intersection", "union"))
 \arguments{
 \item{rankings}{Data frame or matrix. Each column is a list of elements representing a ranking. The columns should have the same elements.}
 
-\item{modality}{Either "intersection" or "union". Corresponds to the use of the max or min function on rankings for a given named element.}
+\item{modality}{Either "intersection" or "union". Corresponds to the use of the max or min function on rankings for a given named element. The effect is the same as to form the intersection (respectively union) of the first K elements from each ranking, recording the order in which new elements are added.}
 }
 \value{
 A vector, the same length as the columns of ranking, representing the merged ranking.

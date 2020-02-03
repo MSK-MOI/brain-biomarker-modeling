@@ -2,7 +2,7 @@
 % Please edit documentation in R/feature_selection_utilities.R
 \name{merge_specific_rankings}
 \alias{merge_specific_rankings}
-\title{Combine t-test-based and GLM-based rankings.}
+\title{Combine various selected rankings.}
 \usage{
 merge_specific_rankings(
   ttest_ordered,
@@ -27,5 +27,5 @@ merge_specific_rankings(
 Vector, merged ranking.
 }
 \description{
-Combine t-test-based and GLM-based rankings.
+Combine various selected rankings.
 }

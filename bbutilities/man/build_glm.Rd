@@ -4,12 +4,14 @@
 \alias{build_glm}
 \title{Make GLM model}
 \usage{
-build_glm(X, plotting = F)
+build_glm(X, plotting = FALSE, quiet = FALSE)
 }
 \arguments{
 \item{X}{Data frame with with feature data and SURVIVAL_STATUS.}
 
 \item{plotting}{(optional). Whether to make a plot of the ROC curve. Default FALSE.}
+
+\item{quiet}{(optional). Suppress output to console. Default FALSE.}
 }
 \value{
 AUC of GLM for predicting the SURVIVAL_STATUS.

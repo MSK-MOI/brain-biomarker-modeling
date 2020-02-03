@@ -11,7 +11,7 @@ rank_features(stats, feature_names, write = NA)
 
 \item{feature_names}{As returned by load_data.}
 
-\item{write}{(optional) A string added to output filenames to aid in identification. Default NA, no output saved to file.}
+\item{write}{(optional) A string added to output filenames to aid in identification (e.g. write="ge", write="cn", or write="cnge"). Default NA, no output saved to file.}
 }
 \value{
 list(ttest_ordered, glm_ordered)

@@ -2,22 +2,33 @@
 % Please edit documentation in R/feature_selection_utilities.R
 \name{cross_validation}
 \alias{cross_validation}
-\title{Perform cross validation}
+\title{Perform cross validation of whole pipeline}
 \usage{
-cross_validation(ld, k = 3, cores = 1, threshold = 100)
+cross_validation(
+  ld,
+  k = 3,
+  cores = 1,
+  threshold = 100,
+  hierarchical_feature_selection = FALSE,
+  number_hierarchical_features
+)
 }
 \arguments{
 \item{ld}{Data as returned by load_data or pipeline.}
 
 \item{k}{(optional) Number of parts in the partition. Default 3.}
 
-\item{cores}{Number of cores for parallel computation.}
+\item{cores}{(optional) Number of cores for parallel computation. Default 1.}
 
-\item{threshold}{Number of features to use.}
+\item{threshold}{(optional) Number of features to use. Default 100.}
+
+\item{hierarchical_feature_selection}{(optional) Whether to use hierarchical clustering for final step of feature selection. Default FALSE.}
+
+\item{number_hierarchical_features}{Number of final features to select using hierarchical clustering.}
 }
 \value{
 ...
 }
 \description{
-Perform cross validation
+Perform cross validation of whole pipeline
 }

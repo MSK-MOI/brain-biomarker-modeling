@@ -27,7 +27,7 @@ library(ROCR)
 library(nnet)
 library(caret)
 
-#' Load data
+#' Load data (from brain biomarker challenge files)
 #'
 #' @param filenames Vector of filenames: phenotype, outcome, and feature data.
 #' @param drop.zeros Whether to drop features that are identically zero.
@@ -133,9 +133,9 @@ assess_subtype_with_mglm <- function(X) {
 #' Assess relevance of variables to outcome
 #' 
 #' @param df Data frame as returned by load_data. Rows are samples. Columns are features, including SURVIVAL_STATUS and CANCER_TYPE, as well as the input feature names.
-#' @param feature_names Feature names (e.g genes), as returned by load_data.
+#' @param feature_names Feature names (e.g. genes), as returned by load_data.
 #' @param cores (optional) Number of cores to use for parallel computation. Default 1.
-#' @return stats=list(pvalue_ttest, auc_glm, pvalue_anova, acc_mglm). These three elements are vectors with one entry for each feature (with names given by feature_names).
+#' @return stats=list(pvalue_ttest, auc_glm, pvalue_anova, acc_mglm). These four elements are vectors with one entry for each feature (with names given by feature_names).
 #' @export
 calculate_stats <- function(df, feature_names, cores=1) {
 
@@ -167,10 +167,10 @@ calculate_stats <- function(df, feature_names, cores=1) {
 #' Utility function
 #' @param stats As returned by calculate_stats.
 #' @param feature_names As returned by load_data.
-#' @param write (optional) A string added to output filenames to aid in identification. Default NA, no output saved to file.
+#' @param write (optional) A string added to output filenames to aid in identification (e.g. write="ge", write="cn", or write="cnge"). Default NA, no output saved to file.
 #' @return list(ttest_ordered, glm_ordered)
 #' @export
-rank_features <- function(stats, feature_names, write=NA) {#e.g. write="ge" or write="cnv"
+rank_features <- function(stats, feature_names, write=NA) {
     ttest_ordered <- names(stats$pvalue_ttest)[order(stats$pvalue_ttest)]
     glm_ordered   <- names(stats$auc_glm)[order(stats$auc_glm, decreasing=T)]
     anova_ordered <- names(stats$pvalue_anova)[order(stats$pvalue_anova)]
@@ -194,13 +194,13 @@ rank_features <- function(stats, feature_names, write=NA) {#e.g. write="ge" or w
 #' 
 #' More flexible than combining a fixed number from each.
 #' @param rankings Data frame or matrix. Each column is a list of elements representing a ranking. The columns should have the same elements.
-#' @param modality Either "intersection" or "union". Corresponds to the use of the max or min function on rankings for a given named element.
+#' @param modality Either "intersection" or "union". Corresponds to the use of the max or min function on rankings for a given named element. The effect is the same as to form the intersection (respectively union) of the first K elements from each ranking, recording the order in which new elements are added.
 #' @return A vector, the same length as the columns of ranking, representing the merged ranking.
 #' @export
 merge_rankings <- function(rankings, modality=c("intersection", "union")) {
-    modality <- match.arg(modality)
-    feature_names <- sort(rankings[,1])
+    number_entries <- dim(rankings)[1]
     number_rankings <- dim(rankings)[2]
+    feature_names <- sort(rankings[,1])
     for(i in 2:number_rankings) {
         if(!all(feature_names == sort(rankings[,i]))) {
             stop(paste0("Ranking 1 and ", i, " involve different named feature sets"))
@@ -209,26 +209,28 @@ merge_rankings <- function(rankings, modality=c("intersection", "union")) {
     
     direct_ranks <- matrix(0, nrow=dim(rankings)[1], ncol=dim(rankings)[2])
     rownames(direct_ranks) <- feature_names
-    N <- length(feature_names)
     for(j in 1:(dim(rankings)[2])) {
-        temp_rank <- c(1:N)
+        temp_rank <- c(1:number_entries)
         names(temp_rank) <- rankings[,j]
         direct_ranks[,j] <- temp_rank[feature_names]
     }
+
+    modality <- match.arg(modality)
     if(modality == "intersection") {
         summaryfunction <- max
     }
     if(modality == "union") {
         summaryfunction <- min
     }
-    mrank <- sapply(1:dim(rankings)[1], FUN=function(x){summaryfunction(direct_ranks[x,])})
-    names(mrank) <- feature_names
-    nrank <- names(sort(mrank))
-    return(nrank)
+
+    ranks_by_name <- sapply(1:number_entries, FUN=function(x){summaryfunction(direct_ranks[x,])})
+    names(ranks_by_name) <- feature_names
+    new_ranking <- names(sort(ranks_by_name))
+    return(new_ranking)
 }
 
 
-#' Combine t-test-based and GLM-based rankings.
+#' Combine various selected rankings.
 #' 
 #' @param ttest_ordered As returned by stats.
 #' @param glm_ordered As returned by stats.
@@ -286,19 +288,18 @@ build_glm <- function(X, plotting=FALSE, quiet=FALSE) {
 
     p <- predict(glm_model, type="response")
     pr <- prediction(p, X$SURVIVAL_STATUS)
-
     prf <- performance(pr, measure = "tpr", x.measure = "fpr")
     if(plotting) {
         plot(prf)
     }
 
-    fprs <- slot(prf, "x.values")[[1]]
-    tprs <- slot(prf, "y.values")[[1]]
+    # fprs <- slot(prf, "x.values")[[1]]
+    # tprs <- slot(prf, "y.values")[[1]]
     cutoffs <- slot(prf, "alpha.values")[[1]]
     accs <- sapply(cutoffs, FUN=function(cutoff){
                                 sum((p > cutoff) == X$SURVIVAL_STATUS)/length(p)
                             })
-    i<-which.max(accs)
+    i <- which.max(accs)
     cutoff <- cutoffs[i]
     acc  <- sum((p > cutoff) == X$SURVIVAL_STATUS)/length(p)
     sens <- sum((p > cutoff) & X$SURVIVAL_STATUS)/sum(X$SURVIVAL_STATUS)
@@ -328,16 +329,15 @@ build_glm <- function(X, plotting=FALSE, quiet=FALSE) {
     model_wrapper$auc <- auc
     model_wrapper$glm_model <- glm_model
     model_wrapper$coef <- summary(glm_model)$coef[,"Estimate"]
-    model_wrapper$X <- X
     return(model_wrapper)
 }
 
 
-#' Cross validation fold creation respecting subtype and survival status
+#' Fold-creation for cross validation respecting subtype and survival status
 #' 
 #' @param df Data frame as returned by load_data or pipeline. Only needs columns CANCER_TYPE and SURVIVAL_STATUS to be present.
 #' @param k (optional) Number of parts in the partition. Default 3. 
-#' @return A partition balanced with respect to CANCER_TYPE and SURVIVAL_STATUS
+#' @return A partition (list) balanced with respect to CANCER_TYPE and SURVIVAL_STATUS
 #' @export
 create_folds_subtype <- function(df, k=3) {
     set.seed(123456)
@@ -347,23 +347,22 @@ create_folds_subtype <- function(df, k=3) {
                                     fine_partition <- lapply(indices, FUN=function(indices_part){ rownames(df)[df$CANCER_TYPE == x][indices_part] })
                                     return(fine_partition)
                                 })
-    # print(fine_partitions)
     partition <- mapply(c, fine_partitions[[1]], fine_partitions[[2]], fine_partitions[[3]], fine_partitions[[4]])
     return(partition)
 }
 
 
-#' Perform cross validation
+#' Perform cross validation of whole pipeline
 #' 
 #' @param ld Data as returned by load_data or pipeline.
 #' @param k (optional) Number of parts in the partition. Default 3. 
-#' @param cores Number of cores for parallel computation.
-#' @param threshold Number of features to use.
+#' @param cores (optional) Number of cores for parallel computation. Default 1.
+#' @param threshold (optional) Number of features to use. Default 100.
 #' @param hierarchical_feature_selection (optional) Whether to use hierarchical clustering for final step of feature selection. Default FALSE.
 #' @param number_hierarchical_features Number of final features to select using hierarchical clustering.
 #' @return ...
 #' @export
-cross_validation <- function(ld, k=3, cores=1, threshold=100, hierarchical_feature_selection, number_hierarchical_features) {
+cross_validation <- function(ld, k=3, cores=1, threshold=100, hierarchical_feature_selection=FALSE, number_hierarchical_features) {
     df <- ld[[1]]
     feature_names <- ld[[2]]
     partition <- create_folds_subtype(df, k=k)
@@ -449,7 +448,7 @@ select_representative_features <- function(ld, ranking, N, M) {
 #' @param quiet (optional). Suppress outpute to console. Default FALSE.
 #' @return ld (see load_data). If model_only=TRUE, returns only summary statistics for the run (for validation, etc.).
 #' @export
-pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, drop.zeros=FALSE, threshold=100, cores=1, write=NA, model_only=FALSE, hierarchical_feature_selection=FALSE, number_hierarchical_features=NA, testset=NULL, quiet=FALSE) {
+pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, drop.zeros=FALSE, write=NA, threshold=100, cores=1, model_only=FALSE, hierarchical_feature_selection=FALSE, number_hierarchical_features=NA, testset=NULL, quiet=FALSE) {
     #Load data
     if(is.null(ld)) {
         ld <- load_data(filenames, drop.zeros=drop.zeros)
@@ -521,8 +520,8 @@ pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, dr
             plot(prf)
         }
 
-        fprs <- slot(prf, "x.values")[[1]]
-        tprs <- slot(prf, "y.values")[[1]]
+        # fprs <- slot(prf, "x.values")[[1]]
+        # tprs <- slot(prf, "y.values")[[1]]
         cutoffs <- slot(prf, "alpha.values")[[1]]
         accs <- sapply(cutoffs, FUN=function(cutoff){
                                     sum((p > cutoff) == testset$SURVIVAL_STATUS)/length(p)

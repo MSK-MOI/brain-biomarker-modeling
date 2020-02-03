@@ -2,7 +2,7 @@
 % Please edit documentation in R/feature_selection_utilities.R
 \name{create_folds_subtype}
 \alias{create_folds_subtype}
-\title{Cross validation fold creation respecting subtype and survival status}
+\title{Fold-creation for cross validation respecting subtype and survival status}
 \usage{
 create_folds_subtype(df, k = 3)
 }
@@ -12,8 +12,8 @@ create_folds_subtype(df, k = 3)
 \item{k}{(optional) Number of parts in the partition. Default 3.}
 }
 \value{
-A partition balanced with respect to CANCER_TYPE and SURVIVAL_STATUS
+A partition (list) balanced with respect to CANCER_TYPE and SURVIVAL_STATUS
 }
 \description{
-Cross validation fold creation respecting subtype and survival status
+Fold-creation for cross validation respecting subtype and survival status
 }

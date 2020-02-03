@@ -10,12 +10,14 @@ pipeline(
   merged_ranking = NULL,
   plotting = FALSE,
   drop.zeros = FALSE,
+  write = NA,
   threshold = 100,
   cores = 1,
-  write = NA,
   model_only = FALSE,
   hierarchical_feature_selection = FALSE,
-  number_hierarchical_features = NA
+  number_hierarchical_features = NA,
+  testset = NULL,
+  quiet = FALSE
 )
 }
 \arguments{
@@ -29,17 +31,21 @@ pipeline(
 
 \item{drop.zeros}{Whether to drop features that are identically zero.}
 
+\item{write}{(optional) A string added to output filenames to aid in identification. Default NA, no addition.}
+
 \item{threshold}{Number of features to use in ranking stage.}
 
 \item{cores}{Number of cores for parallel computation.}
-
-\item{write}{(optional) A string added to output filenames to aid in identification. Default NA, no addition.}
 
 \item{model_only}{(optional) Whether to return only the model/stats. Default FALSE.}
 
 \item{hierarchical_feature_selection}{(optional) Whether to use hierarchical clustering for final step of feature selection. Default FALSE.}
 
 \item{number_hierarchical_features}{Number of final features to select using hierarchical clustering.}
+
+\item{testset}{(optional). If provided, the reporting on the final model is for its performance on the testset. Default NULL.}
+
+\item{quiet}{(optional). Suppress outpute to console. Default FALSE.}
 }
 \value{
 ld (see load_data). If model_only=TRUE, returns only summary statistics for the run (for validation, etc.).
