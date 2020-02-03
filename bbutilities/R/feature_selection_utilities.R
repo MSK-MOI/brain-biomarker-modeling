@@ -26,6 +26,7 @@ library(parallel)
 library(ROCR)
 library(nnet)
 library(caret)
+library(glmnet)
 
 #' Load data (from brain biomarker challenge files)
 #'
@@ -246,7 +247,7 @@ merge_specific_rankings <- function(ttest_ordered, glm_ordered, anova_ordered, m
     rankings_anova_mglm <- cbind(anova_ordered, mglm_ordered)
     merged_anova_mglm <- merge_rankings(rankings_anova_mglm, modality="intersection")
 
-    rankings_merged <- cbind(merged_t_glm, merged_anova_mglm)
+    rankings_merged <- cbind(merged_anova_mglm, merged_t_glm)
     merged <- merge_rankings(rankings_merged, modality="union")
     
     return(merged)
@@ -331,6 +332,67 @@ build_glm <- function(X, plotting=FALSE, quiet=FALSE) {
     model_wrapper$coef <- summary(glm_model)$coef[,"Estimate"]
     return(model_wrapper)
 }
+
+
+#' Make GLM model, with LASSO regularization
+#' 
+#' @param X Data frame with with feature data and SURVIVAL_STATUS.
+#' @param plotting (optional). Whether to make a plot of the ROC curve. Default FALSE.
+#' @param quiet (optional). Suppress output to console. Default FALSE.
+#' @param alpha Regularization parameter, between 0 and 1. Default 1.
+#' @return AUC of GLM for predicting the SURVIVAL_STATUS.
+#' @export
+build_glm_lasso <- function(X, plotting=FALSE, quiet=FALSE, alpha=1.0) {
+    # glm_model <- glm(SURVIVAL_STATUS ~., family=binomial(link='logit'), data=X)
+    MX <- as.matrix(X[, setdiff(colnames(X), "SURVIVAL_STATUS")])
+    glm_model <- glmnet(as.matrix(X[, setdiff(colnames(X), "SURVIVAL_STATUS")]), X$SURVIVAL_STATUS, family="binomial", alpha=alpha)
+
+    p <- predict(glm_model, type="response", newx=MX)
+    pr <- prediction(p, X$SURVIVAL_STATUS)
+    prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+    if(plotting) {
+        plot(prf)
+    }
+
+    # fprs <- slot(prf, "x.values")[[1]]
+    # tprs <- slot(prf, "y.values")[[1]]
+    cutoffs <- slot(prf, "alpha.values")[[1]]
+    accs <- sapply(cutoffs, FUN=function(cutoff){
+                                sum((p > cutoff) == X$SURVIVAL_STATUS)/length(p)
+                            })
+    i <- which.max(accs)
+    cutoff <- cutoffs[i]
+    acc  <- sum((p > cutoff) == X$SURVIVAL_STATUS)/length(p)
+    sens <- sum((p > cutoff) & X$SURVIVAL_STATUS)/sum(X$SURVIVAL_STATUS)
+    spec <- sum(!(p > cutoff) & !X$SURVIVAL_STATUS)/sum(!X$SURVIVAL_STATUS)
+
+    auc <- performance(pr, measure = "auc")
+    auc <- auc@y.values[[1]]
+
+    if(!quiet) {
+        cat("Contingency table  :")
+        print(table((p > cutoff) , X$SURVIVAL_STATUS ))
+        cat("                *Actual survival status (0/1)\n")
+        cat("                *Predicted death        (FALSE/TRUE)\n")
+        cat("\n")
+
+        cat(paste0("Accuracy           : ", round(acc, digits=4), "\n"))
+        cat(paste0("Sensitivity        : ", round(sens, digits=4), "\n"))
+        cat(paste0("Specificity        : ", round(spec, digits=4), "\n"))
+        cat(paste0("AUC                : ", round(auc, digits=4), "\n"))
+    }
+
+    model_wrapper <- list()
+    model_wrapper$cutoff <- cutoff
+    model_wrapper$acc <- acc
+    model_wrapper$sens <- sens
+    model_wrapper$spec <- spec
+    model_wrapper$auc <- auc
+    model_wrapper$glm_model <- glm_model
+    model_wrapper$coef <- summary(glm_model)$coef[,"Estimate"]
+    return(model_wrapper)
+}
+
 
 
 #' Fold-creation for cross validation respecting subtype and survival status
@@ -446,9 +508,10 @@ select_representative_features <- function(ld, ranking, N, M) {
 #' @param number_hierarchical_features Number of final features to select using hierarchical clustering.
 #' @param testset (optional). If provided, the reporting on the final model is for its performance on the testset. Default NULL.
 #' @param quiet (optional). Suppress outpute to console. Default FALSE.
+#' @param using_lasso Use LASSO regularization in final model. Default FALSE.
 #' @return ld (see load_data). If model_only=TRUE, returns only summary statistics for the run (for validation, etc.).
 #' @export
-pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, drop.zeros=FALSE, write=NA, threshold=100, cores=1, model_only=FALSE, hierarchical_feature_selection=FALSE, number_hierarchical_features=NA, testset=NULL, quiet=FALSE) {
+pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, drop.zeros=FALSE, write=NA, threshold=100, cores=1, model_only=FALSE, hierarchical_feature_selection=FALSE, number_hierarchical_features=NA, testset=NULL, quiet=FALSE, using_lasso=FALSE) {
     #Load data
     if(is.null(ld)) {
         ld <- load_data(filenames, drop.zeros=drop.zeros)
@@ -497,7 +560,12 @@ pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, dr
         cat("... \n")
     }
 
-    model_wrapper <- build_glm(df[, c("SURVIVAL_STATUS", "CANCER_TYPE", final_features)], plotting=plotting, quiet=quiet)
+    if(using_lasso) {
+        # Note that CANCER_TYPE not appearing below:
+        model_wrapper <- build_glm_lasso(df[, c("SURVIVAL_STATUS", final_features)], plotting=plotting, quiet=quiet)
+    } else {
+        model_wrapper <- build_glm(df[, c("SURVIVAL_STATUS", "CANCER_TYPE", final_features)], plotting=plotting, quiet=quiet)
+    }
     needed_data <- c(model_wrapper$cutoff, model_wrapper$coef)
     names(needed_data)[1] <- "(Cutoff)"
     if(!is.na(write)) {

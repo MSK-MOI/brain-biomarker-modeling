@@ -11,5 +11,5 @@ License: file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.0.2
-Imports: pbmcapply, parallel, methods, ROCR, nnet, caret
-Requires: parallel, methods, ROCR, nnet, caret
+Imports: pbmcapply, parallel, methods, ROCR, nnet, caret, glmnet
+Requires: parallel, methods, ROCR, nnet, caret, glmnet

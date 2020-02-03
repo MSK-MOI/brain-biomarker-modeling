@@ -6,7 +6,7 @@ ld <- pipeline(filenames, threshold=50, drop.zeros=TRUE, cores=3, write="subchal
 
 # Challenge 2
 filenames <- c("sc2_Phase1_CN_Phenotype.tsv", "sc2_Phase1_CN_Outcome.tsv", "sc2_Phase1_CN_FeatureMatrix.tsv")
-ld <- pipeline(filenames, threshold=50, drop.zeros=TRUE, cores=3, write="subchallenge2", hierarchical_feature_selection=FALSE)
+ld <- pipeline(filenames, threshold=50, drop.zeros=TRUE, cores=3, write="subchallenge2", hierarchical_feature_selection=FALSE, using_lasso=TRUE)
 
 # Challenge 3
 filenames <- c("sc3_Phase1_CN_GE_Phenotype.tsv", "sc3_Phase1_CN_GE_Outcome.tsv", "sc3_Phase1_CN_GE_FeatureMatrix.tsv")
