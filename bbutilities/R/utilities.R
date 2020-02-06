@@ -439,10 +439,15 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
 
     glm_coefficients <- data.frame(matrix(0, nrow=length(final_features)+2, ncol=length(types)))
     colnames(glm_coefficients) <- types
-    coef_names <- names(model_wrappers[[1]]$coef)
-    if(length(final_features)+1 != length(coef_names)) {
-        warning("Wrong number of coefficients produced by modeling process?")
+    for(j in 1:length(model_wrappers)) {
+        coef_names <- names(model_wrappers[[j]]$coef)
+        if(length(final_features)+1 != length(coef_names)) {
+            warning("Wrong number of coefficients produced by modeling process?")
+            model_wrappers[[j]]$coef <- rep(0, length(final_features) + 1)
+            return(c(0,0,0,0,0))
+        }
     }
+
     rownames(glm_coefficients) <- c("(Cutoff)", "(Intercept)", sanitize_R_prepends(coef_names[2:length(coef_names)]))
     for(j in 1:length(model_wrappers)) {
         model_wrapper <- model_wrappers[[j]]
