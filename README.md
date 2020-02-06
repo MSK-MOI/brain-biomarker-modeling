@@ -11,10 +11,56 @@ Maryam Pouryahya,
 Allen Tannenbaum
 
 
+  1. **[Biomarkers](#Biomarkers)**
   1. **[Usage](#Usage)**
   2. **[Build the utilities](#Build)**
   3. **[Installation](#Installation)**
   4. **[Documentation](#Documentation)**
+
+Biomarkers <a name="Biomarkers"></a>
+----------
+
+The sub-challenge 1 biomarkers we found to be especially predictive of survival outcome are the 12 genes:
+
+```
+TIMP1
+ZNF32
+ADM
+EIF3E
+CAVIN1
+PLAT
+HAUS4
+MYADM
+MYL9
+RRNAD1
+EMP3
+UBR5
+```
+
+The sub-challenge 2 biomarkers we found to be especially predictive of survival outcome are the 8 chromosome loci:
+
+```
+19q13.13
+9p24.1
+1p13.3
+9p21.3
+1p36.21
+7p11.2
+10q23.32
+1p34.3
+```
+
+The sub-challenge 3 biomarkers we found to be especially predictive of survival outcome are the 7 genes:
+
+```
+ASB3
+CRTAC1
+PCMTD1
+RAB34
+SH3BGRL3
+ULBP2
+EIF3E
+```
 
 Usage <a name="Usage"></a>
 -----

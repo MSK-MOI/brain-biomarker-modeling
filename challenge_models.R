@@ -19,7 +19,7 @@ ld3 <- pipeline(ld=ld3, merged_ranking=ld3[[3]], filenames3, threshold=7, cores=
 
 # Use the following to calculate a summary statistic of the cross-validation efficacy for multiple thresholds on the number of features.
 stats1 <- lapply(1:40, function(j) {
-        ld1 <- pipeline(ld=ld1, merged_ranking=ld1[[3]], filenames1, threshold=j, cores=6, write="subchallenge1")
+        ld1 <- pipeline(ld=ld1, merged_ranking=ld1[[3]], filenames1, threshold=j, cores=6, write="subchallenge1_experiments")
         return(ld1[[4]])
     })
 mean_cv_aucs1 <- sapply(1:40, function(j){return(stats1[[j]][1])})
@@ -27,7 +27,7 @@ accs1 <- sapply(1:40, function(j){return(stats1[[j]][2])})
 specs1 <- sapply(1:40, function(j){return(stats1[[j]][4])})
 
 stats2 <- lapply(1:40, function(j) {
-        ld2 <- pipeline(ld=ld2, merged_ranking=ld2[[3]], filenames2, threshold=j, cores=6, write="subchallenge2")
+        ld2 <- pipeline(ld=ld2, merged_ranking=ld2[[3]], filenames2, threshold=j, cores=6, write="subchallenge2_experiments")
         return(ld2[[4]])
     })
 mean_cv_aucs2 <- sapply(1:40, function(j){return(stats2[[j]][1])})
@@ -35,7 +35,7 @@ accs2 <- sapply(1:40, function(j){return(stats2[[j]][2])})
 specs2 <- sapply(1:40, function(j){return(stats2[[j]][4])})
 
 stats3 <- lapply(1:40, function(j) {
-        ld3 <- pipeline(ld=ld3, merged_ranking=ld3[[3]], filenames3, threshold=j, cores=6, write="subchallenge3")
+        ld3 <- pipeline(ld=ld3, merged_ranking=ld3[[3]], filenames3, threshold=j, cores=6, write="subchallenge3_experiments")
         return(ld3[[4]])
     })
 mean_cv_aucs3 <- sapply(1:40, function(j){return(stats3[[j]][1])})
