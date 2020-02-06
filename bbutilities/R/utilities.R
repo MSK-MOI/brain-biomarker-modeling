@@ -399,21 +399,6 @@ cross_validation_glm <- function(features, df, cancer_type=NULL, k=3, seed=12345
 }
 
 
-#' Save model parameters
-#' 
-#' @param model_wrapper A GLM as returned by build_glm.
-#' @param write An identifying string for output file name.
-#' @export
-write_model_parameters_to_file <- function(model_wrapper, write) {
-    needed_data <- c(model_wrapper$cutoff, model_wrapper$coef)
-    names(needed_data)[1] <- "(Cutoff)"
-    if(!is.na(write)) {
-        file <- paste0(write, "_coefficients")
-        write.table(needed_data, paste0(file, ".tsv"), col.names=FALSE, sep="\t", quote=FALSE)
-    }
-}
-
-
 sanitize_R_prepends <- function(features) {
     if(length(grep("^X", features)) == length(features)) {
         return(sub("^X", "", features))
@@ -437,7 +422,6 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
     cat(paste0(bold("GLM model for ", filenames[1], ", ... (", write, ")"), "\n\n"))
 
     types <- unique(df$CANCER_TYPE)
-    types <- setdiff(types, c("UNCLASSIFIED", "MIXED"))
 
     model_wrappers <- lapply(types, function(type) {
             cat("\n")
@@ -447,10 +431,23 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
             cat("Cross validation\n")
             cv_results <- cross_validation_glm(final_features, df, cancer_type=type)
             print(cv_results)
-            write_model_parameters_to_file(model_wrapper, paste0(write, "_", type))
+            # write_model_parameters_to_file(model_wrapper, paste0(write, "_", type))
             model_wrapper$cv_mean_auc <- cv_results$means[4]
             return(model_wrapper)
         })
+
+    glm_coefficients <- data.frame(matrix(0, nrow=length(final_features)+2, ncol=length(types)))
+    colnames(glm_coefficients) <- types
+    coef_names <- names(model_wrappers[[1]]$coef)
+    rownames(glm_coefficients) <- c("(Cutoff)", "(Intercept)", sanitize_R_prepends(coef_names[2:length(coef_names)]))
+    for(j in 1:length(model_wrappers)) {
+        model_wrapper <- model_wrappers[[j]]
+        type <- types[j]
+        minimal_data_needed_to_model <- c(model_wrapper$cutoff, model_wrapper$coef)
+        glm_coefficients[,type] <- minimal_data_needed_to_model
+    }
+    file <- paste0(write, "_coefficients")
+    write.table(glm_coefficients, paste0(file, ".tsv"), col.names=TRUE, sep="\t", quote=FALSE)
 
     all_predictions <- data.frame(matrix(0, nrow=0, ncol=3))
     for(type in types) {
