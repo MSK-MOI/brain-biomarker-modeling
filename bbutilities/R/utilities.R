@@ -433,6 +433,7 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
             print(cv_results)
             # write_model_parameters_to_file(model_wrapper, paste0(write, "_", type))
             model_wrapper$cv_mean_auc <- cv_results$means[4]
+            model_wrapper$cv_mean_acc <- cv_results$means[1]
             return(model_wrapper)
         })
 
@@ -440,7 +441,7 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
     colnames(glm_coefficients) <- types
     coef_names <- names(model_wrappers[[1]]$coef)
     if(length(final_features)+1 != length(coef_names)) {
-        stop("Wrong number of coefficients produced by modeling process?")
+        warning("Wrong number of coefficients produced by modeling process?")
     }
     rownames(glm_coefficients) <- c("(Cutoff)", "(Intercept)", sanitize_R_prepends(coef_names[2:length(coef_names)]))
     for(j in 1:length(model_wrappers)) {
@@ -478,12 +479,14 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
     cat(paste0("Mean AUC of submodels : ", round(mean_auc, digits=4), "\n"))
     cv_mean_auc <- mean(sapply(1:length(model_wrappers), function(j){return(model_wrappers[[j]]$cv_mean_auc)} ))
     cat(paste0("Mean AUC (submodel CV): ", round(cv_mean_auc, digits=4), "\n"))
+    cv_mean_acc <- mean(sapply(1:length(model_wrappers), function(j){return(model_wrappers[[j]]$cv_mean_acc)} ))
+    cat(paste0("Mean accuracy (CV)    : ", round(cv_mean_acc, digits=4), "\n"))
 
     cat("\n")
     cat(paste0(bold("Features:"),"\n"))
     cat(paste(sanitize_R_prepends(final_features), collapse="\n"))
     cat("\n\n")
-    return(c(cv_mean_auc=cv_mean_auc, acc=acc, sens=sens, spec=spec))
+    return(c(cv_mean_auc=cv_mean_auc, acc=acc, sens=sens, spec=spec, cv_mean_acc=cv_mean_acc))
 }
 
 
