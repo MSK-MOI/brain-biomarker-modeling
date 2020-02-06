@@ -439,6 +439,9 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
     glm_coefficients <- data.frame(matrix(0, nrow=length(final_features)+2, ncol=length(types)))
     colnames(glm_coefficients) <- types
     coef_names <- names(model_wrappers[[1]]$coef)
+    if(length(final_features)+1 != length(coef_names)) {
+        stop("Wrong number of coefficients produced by modeling process?")
+    }
     rownames(glm_coefficients) <- c("(Cutoff)", "(Intercept)", sanitize_R_prepends(coef_names[2:length(coef_names)]))
     for(j in 1:length(model_wrappers)) {
         model_wrapper <- model_wrappers[[j]]
@@ -520,8 +523,8 @@ pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, dr
     final_features <- merged_ranking[1:number_of_features]
 
     #Build model
-    acc_and_cv_mean_auc <- build_and_report_final_model(df, final_features, write, filenames)
-    ld[[4]] <- acc_and_cv_mean_auc
+    sts <- build_and_report_final_model(df, final_features, write, filenames)
+    ld[[4]] <- sts
     return(ld)
 }
 
