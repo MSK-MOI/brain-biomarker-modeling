@@ -18,6 +18,7 @@
 #' @import ROCR
 #' @import nnet
 #' @import caret
+#' @import crayon
 
 library(stats)
 library(utils)
@@ -26,15 +27,16 @@ library(parallel)
 library(ROCR)
 library(nnet)
 library(caret)
-library(glmnet)
+library(crayon)
 
 #' Load data (from brain biomarker challenge files)
 #'
 #' @param filenames Vector of filenames: phenotype, outcome, and feature data.
 #' @param drop.zeros Whether to drop features that are identically zero.
+#' @param merge_extraneous Whether to merge UNKNOWN, MIXED, and UNCLASSIFIED into one category.
 #' @return list(df, feature_names). df$type, df$outcome, df$gene1, df$gene2, etc.
 #' @export
-load_data <- function(filenames, drop.zeros=FALSE) {
+load_data <- function(filenames, drop.zeros=FALSE, merge_extraneous=TRUE) {
     categories <- read.csv(filenames[1], header=T, stringsAsFactors=F, sep="\t", row.names=1)
     type <- categories[,c("WHO_GRADING","CANCER_TYPE"),drop=F]
 
@@ -59,6 +61,13 @@ load_data <- function(filenames, drop.zeros=FALSE) {
     df <- data.frame(cbind(type$CANCER_TYPE, outcome$SURVIVAL_STATUS, gv, stringsAsFactors=F))
     colnames(df)[1] <- "CANCER_TYPE"
     colnames(df)[2] <- "SURVIVAL_STATUS"
+
+    if(merge_extraneous) {
+        extra <- c("UNKNOWN", "MIXED", "UNCLASSIFIED")
+        newlabel <- paste(extra, collapse="_")
+        df[df$CANCER_TYPE %in% extra,"CANCER_TYPE"] <- newlabel
+    }
+
     return(list(df, feature_names))
 }
 
@@ -285,7 +294,9 @@ write_subset <- function(features, df, write=NA) {
 #' @return AUC of GLM for predicting the SURVIVAL_STATUS.
 #' @export
 build_glm <- function(X, plotting=FALSE, quiet=FALSE) {
+    suppressWarnings(
     glm_model <- glm(SURVIVAL_STATUS ~., family=binomial(link='logit'), data=X)
+    )
 
     p <- predict(glm_model, type="response")
     pr <- prediction(p, X$SURVIVAL_STATUS)
@@ -310,11 +321,11 @@ build_glm <- function(X, plotting=FALSE, quiet=FALSE) {
     auc <- auc@y.values[[1]]
 
     if(!quiet) {
-        cat("Contingency table  :")
-        print(table((p > cutoff) , X$SURVIVAL_STATUS ))
-        cat("                *Actual survival status (0/1)\n")
-        cat("                *Predicted death        (FALSE/TRUE)\n")
-        cat("\n")
+        # cat("Contingency table  :")
+        # print(table((p > cutoff) , X$SURVIVAL_STATUS ))
+        # # cat(paste0(italic("                *Actual survival status (0/1)"),"\n"))
+        # # cat(paste0(italic("                *Predicted death        (FALSE/TRUE)"),"\n"))
+        # cat("\n")
 
         cat(paste0("Accuracy           : ", round(acc, digits=4), "\n"))
         cat(paste0("Sensitivity        : ", round(sens, digits=4), "\n"))
@@ -330,166 +341,149 @@ build_glm <- function(X, plotting=FALSE, quiet=FALSE) {
     model_wrapper$auc <- auc
     model_wrapper$glm_model <- glm_model
     model_wrapper$coef <- summary(glm_model)$coef[,"Estimate"]
+    model_wrapper$predictions <- data.frame(id=rownames(X), predictions=(p > cutoff), SURVIVAL_STATUS=X$SURVIVAL_STATUS)
     return(model_wrapper)
 }
 
 
-#' Make GLM model, with LASSO regularization
+#' Perform cross validation of simple GLM for SURVIVAL_STATUS, from a given feature set 
 #' 
-#' @param X Data frame with with feature data and SURVIVAL_STATUS.
-#' @param plotting (optional). Whether to make a plot of the ROC curve. Default FALSE.
-#' @param quiet (optional). Suppress output to console. Default FALSE.
-#' @param alpha Regularization parameter, between 0 and 1. Default 1.
-#' @return AUC of GLM for predicting the SURVIVAL_STATUS.
+#' @param features The features to use. 
+#' @param df The data frame.
+#' @param cancer_type (optional) Cancer type or types to restrict the model to. Default NULL.
+#' @param k (optional) Number of folds for cross validation. Default 3.
+#' @param seed (optional) Seed number for pseudo-random reproducibility. Default 12345.
+#' @return A data frame with the accuracy, sensitivity, specificity, and AUC of the test predictions. Also includes mean summary over the folds.
 #' @export
-build_glm_lasso <- function(X, plotting=FALSE, quiet=FALSE, alpha=1.0) {
-    # glm_model <- glm(SURVIVAL_STATUS ~., family=binomial(link='logit'), data=X)
-    MX <- as.matrix(X[, setdiff(colnames(X), "SURVIVAL_STATUS")])
-    glm_model <- glmnet(as.matrix(X[, setdiff(colnames(X), "SURVIVAL_STATUS")]), X$SURVIVAL_STATUS, family="binomial", alpha=alpha)
-
-    p <- predict(glm_model, type="response", newx=MX)
-    pr <- prediction(p, X$SURVIVAL_STATUS)
-    prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-    if(plotting) {
-        plot(prf)
+cross_validation_glm <- function(features, df, cancer_type=NULL, k=3, seed=12345) {
+    df_small <- df[,c("SURVIVAL_STATUS",features)]
+    if(!is.null(cancer_type)) {
+        df_small <- df_small[df$CANCER_TYPE %in% cancer_type,]
     }
+    set.seed(seed)
+    partition <- createFolds(df_small$SURVIVAL_STATUS, k=k)
+    N <- length(rownames(df_small))
 
-    # fprs <- slot(prf, "x.values")[[1]]
-    # tprs <- slot(prf, "y.values")[[1]]
-    cutoffs <- slot(prf, "alpha.values")[[1]]
-    accs <- sapply(cutoffs, FUN=function(cutoff){
-                                sum((p > cutoff) == X$SURVIVAL_STATUS)/length(p)
-                            })
-    i <- which.max(accs)
-    cutoff <- cutoffs[i]
-    acc  <- sum((p > cutoff) == X$SURVIVAL_STATUS)/length(p)
-    sens <- sum((p > cutoff) & X$SURVIVAL_STATUS)/sum(X$SURVIVAL_STATUS)
-    spec <- sum(!(p > cutoff) & !X$SURVIVAL_STATUS)/sum(!X$SURVIVAL_STATUS)
+    test_part <- function(part) {
+        training_fold <- df_small[setdiff(1:N, part), ]
+        test_fold <- df_small[part, ]
+        suppressWarnings(
+        model_wrapper <- build_glm(training_fold, plotting=FALSE, quiet=TRUE)
+        )
+        suppressWarnings(
+        p <- predict(model_wrapper$glm_model, newdata=test_fold, type="response")
+        )
+        pr <- prediction(p, test_fold$SURVIVAL_STATUS)
+        prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+        auc <- performance(pr, measure = "auc")
+        auc <- auc@y.values[[1]]
 
-    auc <- performance(pr, measure = "auc")
-    auc <- auc@y.values[[1]]
-
-    if(!quiet) {
-        cat("Contingency table  :")
-        print(table((p > cutoff) , X$SURVIVAL_STATUS ))
-        cat("                *Actual survival status (0/1)\n")
-        cat("                *Predicted death        (FALSE/TRUE)\n")
-        cat("\n")
-
-        cat(paste0("Accuracy           : ", round(acc, digits=4), "\n"))
-        cat(paste0("Sensitivity        : ", round(sens, digits=4), "\n"))
-        cat(paste0("Specificity        : ", round(spec, digits=4), "\n"))
-        cat(paste0("AUC                : ", round(auc, digits=4), "\n"))
-    }
-
-    model_wrapper <- list()
-    model_wrapper$cutoff <- cutoff
-    model_wrapper$acc <- acc
-    model_wrapper$sens <- sens
-    model_wrapper$spec <- spec
-    model_wrapper$auc <- auc
-    model_wrapper$glm_model <- glm_model
-    model_wrapper$coef <- summary(glm_model)$coef[,"Estimate"]
-    return(model_wrapper)
-}
-
-
-
-#' Fold-creation for cross validation respecting subtype and survival status
-#' 
-#' @param df Data frame as returned by load_data or pipeline. Only needs columns CANCER_TYPE and SURVIVAL_STATUS to be present.
-#' @param k (optional) Number of parts in the partition. Default 3. 
-#' @return A partition (list) balanced with respect to CANCER_TYPE and SURVIVAL_STATUS
-#' @export
-create_folds_subtype <- function(df, k=3) {
-    set.seed(123456)
-    types_to_consider=c("ASTROCYTOMA","GBM","OLIGODENDROGLIOMA","UNKNOWN")
-    fine_partitions <- lapply(types_to_consider, FUN=function(x){
-                                    indices <- createFolds(df$SURVIVAL_STATUS[df$CANCER_TYPE == x], k=k)
-                                    fine_partition <- lapply(indices, FUN=function(indices_part){ rownames(df)[df$CANCER_TYPE == x][indices_part] })
-                                    return(fine_partition)
+        X <- test_fold
+        cutoffs <- slot(prf, "alpha.values")[[1]]
+        accs <- sapply(cutoffs, FUN=function(cutoff){
+                                    sum((p > cutoff) == X$SURVIVAL_STATUS)/length(p)
                                 })
-    partition <- mapply(c, fine_partitions[[1]], fine_partitions[[2]], fine_partitions[[3]], fine_partitions[[4]])
-    return(partition)
+        i <- which.max(accs)
+        cutoff <- cutoffs[i]
+        acc  <- sum((p > cutoff) == X$SURVIVAL_STATUS)/length(p)
+        sens <- sum((p > cutoff) & X$SURVIVAL_STATUS)/sum(X$SURVIVAL_STATUS)
+        spec <- sum(!(p > cutoff) & !X$SURVIVAL_STATUS)/sum(!X$SURVIVAL_STATUS)
+
+        return(c(Accuracy=acc, Sensitivity=sens, Specificity=spec, AUC=auc))
+    }
+
+    cv_result <- data.frame(lapply(partition, test_part))
+    cv_result <- cbind(cv_result, sapply(1:4, function(j){round( mean(as.numeric(cv_result[j,])), digits=3)}) )
+    colnames(cv_result)[4] <- "means"
+    return(cv_result)
 }
 
 
-#' Perform cross validation of whole pipeline
+#' Save model parameters
 #' 
-#' @param ld Data as returned by load_data or pipeline.
-#' @param k (optional) Number of parts in the partition. Default 3. 
-#' @param cores (optional) Number of cores for parallel computation. Default 1.
-#' @param threshold (optional) Number of features to use. Default 100.
-#' @param hierarchical_feature_selection (optional) Whether to use hierarchical clustering for final step of feature selection. Default FALSE.
-#' @param number_hierarchical_features Number of final features to select using hierarchical clustering.
-#' @return ...
+#' @param model_wrapper A GLM as returned by build_glm.
+#' @param write An identifying string for output file name.
 #' @export
-cross_validation <- function(ld, k=3, cores=1, threshold=100, hierarchical_feature_selection=FALSE, number_hierarchical_features) {
-    df <- ld[[1]]
-    feature_names <- ld[[2]]
-    partition <- create_folds_subtype(df, k=k)
-    cv <- lapply(partition, function(x){
-                                training_fold <- df[setdiff(rownames(df),x), ]
-                                test_fold <- df[x, ]
-                                result <- pipeline( c(),
-                                                    ld=list(training_fold, feature_names),
-                                                    testset=test_fold,
-                                                    drop.zeros=TRUE,
-                                                    threshold=threshold,
-                                                    cores=cores,
-                                                    model_only=TRUE,
-                                                    hierarchical_feature_selection=hierarchical_feature_selection,
-                                                    number_hierarchical_features=number_hierarchical_features,
-                                                    quiet=TRUE)
-                                return(result)
-                            })
-
-    stats <- data.frame(matrix(0, nrow=4, ncol=k))
-    for(j in 1:k) {
-        stats[1,j] <- cv[[j]]$acc
-        stats[2,j] <- cv[[j]]$sens
-        stats[3,j] <- cv[[j]]$spec
-        stats[4,j] <- cv[[j]]$auc
+write_model_parameters_to_file <- function(model_wrapper, write) {
+    needed_data <- c(model_wrapper$cutoff, model_wrapper$coef)
+    names(needed_data)[1] <- "(Cutoff)"
+    if(!is.na(write)) {
+        file <- paste0(write, "_coefficients")
+        write.table(needed_data, paste0(file, ".tsv"), col.names=FALSE, sep="\t", quote=FALSE)
     }
-    means <- apply(MARGIN=1, stats, mean)
-    stats <- cbind(stats, means)
-    colnames(stats) <- c(paste0("fold",c(1:k)), "mean")
-    rownames(stats) <- c("acc","sens","spec","auc")
+}
+
+
+sanitize_R_prepends <- function(features) {
+    if(length(grep("^X", features)) == length(features)) {
+        return(sub("^X", "", features))
+    }
+    else {
+        return(features)
+    }
+}
+
+
+#' Build final model and report statistics
+#' 
+#' @param df The data frame.
+#' @param final_features Features to use for final model.
+#' @param write An identifying string for output file names.
+#' @param filenames For reporting.
+#' @return cv_mean_auc Mean AUC among cross-validations in each submodel.
+#' @export
+build_and_report_final_model <- function(df, final_features, write, filenames) {
+    cat("\n")
+    cat(paste0(bold("GLM model for ", filenames[1], ", ... (", write, ")"), "\n\n"))
+
+    types <- unique(df$CANCER_TYPE)
+    types <- setdiff(types, c("UNCLASSIFIED", "MIXED"))
+
+    model_wrappers <- lapply(types, function(type) {
+            cat("\n")
+            cat(paste0(bold$bgGreen(type), "\n"))
+            model_wrapper <- build_glm(df[df$CANCER_TYPE == type, c("SURVIVAL_STATUS", final_features)], plotting=FALSE)
+            cat("\n")
+            cat("Cross validation\n")
+            cv_results <- cross_validation_glm(final_features, df, cancer_type=type)
+            print(cv_results)
+            write_model_parameters_to_file(model_wrapper, paste0(write, "_", type))
+            model_wrapper$cv_mean_auc <- cv_results$means[4]
+            return(model_wrapper)
+        })
+
+    all_predictions <- data.frame(matrix(0, nrow=0, ncol=3))
+    for(type in types) {
+        all_predictions <- rbind(all_predictions, model_wrappers[[which(types == type)]]$predictions)
+    }
+
+    pred <- all_predictions$predictions
+    survival <- all_predictions$SURVIVAL_STATUS
+    acc  <- sum(pred == survival)/length(pred)
+    sens <- sum(pred & survival)/sum(survival)
+    spec <- sum(!pred & !survival)/sum(!survival)
+
+    cat("\n")
+    cat(paste0(bold$bgCyan("Full model stats"),"\n"))
+    cat("Contingency table  :")
+    print(table((pred) , survival))
+    cat(paste0(italic("                *Actual survival status (0/1)"),"\n"))
+    cat(paste0(italic("                *Predicted death        (FALSE/TRUE)"),"\n"))
+    cat("\n")
+
+    cat(paste0("Accuracy              : ", round(acc, digits=4), "\n"))
+    cat(paste0("Sensitivity           : ", round(sens, digits=4), "\n"))
+    cat(paste0("Specificity           : ", round(spec, digits=4), "\n"))
+    mean_auc <- mean(sapply(1:length(model_wrappers), function(j){return(model_wrappers[[j]]$auc)} ))
+    cat(paste0("Mean AUC of submodels : ", round(mean_auc, digits=4), "\n"))
+    cv_mean_auc <- mean(sapply(1:length(model_wrappers), function(j){return(model_wrappers[[j]]$cv_mean_auc)} ))
+    cat(paste0("Mean AUC (submodel CV): ", round(cv_mean_auc, digits=4), "\n"))
+
+    cat("\n")
+    cat(paste0(bold("Features:"),"\n"))
+    cat(paste(sanitize_R_prepends(final_features), collapse="\n"))
     cat("\n\n")
-    cat("Cross-validation statistics (prediction on test data):\n")
-    cat("\n")
-    print(round(stats, digits=2))
-    cat("\n")
-    return(stats)
-}
-
-
-#' Select final representative features using hierarchical clustering
-#' 
-#' @param ld Data as returned by load_data or pipeline.
-#' @param ranking Feature set ranking.
-#' @param N Number of features to return.
-#' @param M Number of features to start with.
-#' @return Vector of N features.
-#' @export
-select_representative_features <- function(ld, ranking, N, M) {
-    df <- ld[[1]]
-    feature_names <- ld[[2]]
-    df_selected <- df[, ranking[1:M]]
-
-    temp_rank <- c(1:length(ranking))
-    names(temp_rank) <- ranking
-    direct_ranks <- temp_rank[feature_names]
-    names(direct_ranks) <- feature_names
-
-    clusters <- hclust(dist(t(df_selected), method = "euclidean"), method = "complete", members = NULL)
-    cluster_cut <- cutree(clusters, N)
-    representatives <- sapply(unique(cluster_cut), FUN=function(j){
-                                    members <- names(which(cluster_cut == j))
-                                    representative <- names(which.min(direct_ranks[members]))
-                                    return(representative)
-                                })
-    return(representatives[order(direct_ranks[representatives])])
+    return(c(cv_mean_auc=cv_mean_auc, acc=acc))
 }
 
 
@@ -503,15 +497,9 @@ select_representative_features <- function(ld, ranking, N, M) {
 #' @param write (optional) A string added to output filenames to aid in identification. Default NA, no addition.
 #' @param threshold Number of features to use in ranking stage.
 #' @param cores Number of cores for parallel computation.
-#' @param model_only (optional) Whether to return only the model/stats. Default FALSE.
-#' @param hierarchical_feature_selection (optional) Whether to use hierarchical clustering for final step of feature selection. Default FALSE.
-#' @param number_hierarchical_features Number of final features to select using hierarchical clustering.
-#' @param testset (optional). If provided, the reporting on the final model is for its performance on the testset. Default NULL.
-#' @param quiet (optional). Suppress outpute to console. Default FALSE.
-#' @param using_lasso Use LASSO regularization in final model. Default FALSE.
-#' @return ld (see load_data). If model_only=TRUE, returns only summary statistics for the run (for validation, etc.).
+#' @return ld (see load_data).
 #' @export
-pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, drop.zeros=FALSE, write=NA, threshold=100, cores=1, model_only=FALSE, hierarchical_feature_selection=FALSE, number_hierarchical_features=NA, testset=NULL, quiet=FALSE, using_lasso=FALSE) {
+pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, drop.zeros=FALSE, write=NA, threshold=100, cores=1) {
     #Load data
     if(is.null(ld)) {
         ld <- load_data(filenames, drop.zeros=drop.zeros)
@@ -531,95 +519,14 @@ pipeline <- function(filenames, ld=NULL, merged_ranking=NULL, plotting=FALSE, dr
     }
 
     #Feature selection
-    if(hierarchical_feature_selection) {
-        if(is.na(number_hierarchical_features)) {
-            stop("If using hierarchical_feature_selection, need to supply number_hierarchical_features.")
-        }
-        number_of_features <- number_hierarchical_features
-        final_features <- select_representative_features(ld, merged_ranking, number_of_features, threshold)
-    } else {
-        number_of_features <- threshold
-        final_features <- merged_ranking[1:number_of_features]
-    }
-    
+    number_of_features <- threshold
+    final_features <- merged_ranking[1:number_of_features]
+
     #Build model
-    if(!is.na(write)) {
-        write.table(final_features, paste0(write, "_features.csv"), col.names=FALSE, row.names=FALSE, quote=FALSE)
-        write_subset(final_features, df, write=write)
-    }
-    if(!quiet) {
-        cat("\n")
-        cat(paste0("GLM model for ", filenames[1], ", ... (", write, ")", "\n\n"))
-        
-        cat(paste0("Number of features : ", number_of_features))
-        if(hierarchical_feature_selection) {
-            cat(paste0("        (Hierarchical cluster representatives)"))
-        }
-        cat("\n")
-        cat(paste(final_features[1:(min(length(final_features), 10))]))
-        cat("... \n")
-    }
-
-    if(using_lasso) {
-        # Note that CANCER_TYPE not appearing below:
-        model_wrapper <- build_glm_lasso(df[, c("SURVIVAL_STATUS", final_features)], plotting=plotting, quiet=quiet)
-    } else {
-        model_wrapper <- build_glm(df[, c("SURVIVAL_STATUS", "CANCER_TYPE", final_features)], plotting=plotting, quiet=quiet)
-    }
-    needed_data <- c(model_wrapper$cutoff, model_wrapper$coef)
-    names(needed_data)[1] <- "(Cutoff)"
-    if(!is.na(write)) {
-        file <- paste0(write, "_coefficients")
-        write.table(needed_data, paste0(file, ".tsv"), col.names=FALSE, sep="\t", quote=FALSE)
-        if(!quiet) {
-            cat("\n")
-            cat(paste0("Wrote data needed to run model to ", paste0(file, ".tsv"), "\n"))
-        }
-        # zip(paste0(file, ".zip"), paste0(file, ".tsv"))
-        # cat(paste0("Compressed file is ", paste0(file, ".zip"), "\n"))
-    }
-
-    if(!is.null(testset)) {
-        p <- predict(model_wrapper$glm_model, newdata=testset, type="response")
-        pr <- prediction(p, testset$SURVIVAL_STATUS)
-
-        prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-        if(plotting) {
-            plot(prf)
-        }
-
-        # fprs <- slot(prf, "x.values")[[1]]
-        # tprs <- slot(prf, "y.values")[[1]]
-        cutoffs <- slot(prf, "alpha.values")[[1]]
-        accs <- sapply(cutoffs, FUN=function(cutoff){
-                                    sum((p > cutoff) == testset$SURVIVAL_STATUS)/length(p)
-                                })
-        i<-which.max(accs)
-        cutoff <- cutoffs[i]
-        acc  <- sum((p > cutoff) == testset$SURVIVAL_STATUS)/length(p)
-        sens <- sum((p > cutoff) & testset$SURVIVAL_STATUS)/sum(testset$SURVIVAL_STATUS)
-        spec <- sum(!(p > cutoff) & !testset$SURVIVAL_STATUS)/sum(!testset$SURVIVAL_STATUS)
-
-        auc <- performance(pr, measure = "auc")
-        auc <- auc@y.values[[1]]
-
-        predict_stats <- list()
-        predict_stats$acc <- acc
-        predict_stats$sens <- sens
-        predict_stats$spec <- spec
-        predict_stats$auc <- auc
-        return(predict_stats)
-    }
-
-    if(model_only) {
-        return(model_wrapper)
-    } else {
-        return(ld)
-    }
+    acc_and_cv_mean_auc <- build_and_report_final_model(df, final_features, write, filenames)
+    ld[[4]] <- acc_and_cv_mean_auc
+    return(ld)
 }
-
-
-
 
 
 

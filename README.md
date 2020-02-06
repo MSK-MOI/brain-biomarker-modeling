@@ -3,7 +3,13 @@ PrecisionFDA Brain Biomarker Challenge
 ======================================
 
 MSKCC MedPhys Team Submission
-=============================
+-----------------------------
+Joseph O. Deasy,
+James Mathews,
+Jung Hun Oh,
+Maryam Pouryahya,
+Allen Tannenbaum
+
 
   1. **[Usage](#Usage)**
   2. **[Build the utilities](#Build)**
@@ -12,7 +18,7 @@ MSKCC MedPhys Team Submission
 
 Usage <a name="Usage"></a>
 -----
-Make sure you've downloaded the data files from the [challenge website](https://precision.fda.gov/challenges/8).
+First build and install the package by following the instruction below. Or use `source("bbutilities/utilities.R")`. Then make sure you've downloaded the data files from the [challenge website](https://precision.fda.gov/challenges/8).
 
 In an R session:
 
@@ -51,16 +57,16 @@ assess_subtype_with_anova
 assess_subtype_with_mglm
 assess_with_glm
 assess_with_ttest
+build_and_report_final_model
 build_glm
 calculate_stats
-create_folds_subtype
-cross_validation
+cross_validation_glm
 load_data
 merge_rankings
 merge_specific_rankings
 pipeline
 rank_features
-select_representative_features
+write_model_parameters_to_file
 write_subset
 ``` 
 
