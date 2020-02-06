@@ -4,16 +4,9 @@
 \alias{pipeline}
 \title{Pipeline}
 \usage{
-pipeline(
-  filenames,
-  ld = NULL,
-  merged_ranking = NULL,
-  plotting = FALSE,
-  drop.zeros = FALSE,
-  write = NA,
-  threshold = 100,
-  cores = 1
-)
+pipeline(filenames, ld = NULL, merged_ranking = NULL,
+  plotting = FALSE, drop.zeros = FALSE, write = NA,
+  threshold = 100, cores = 1)
 }
 \arguments{
 \item{filenames}{Filenames of the phenotype, outcome, and feature matrix (for challenges 1/2/3).}

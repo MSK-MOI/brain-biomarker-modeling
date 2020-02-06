@@ -4,7 +4,8 @@
 \alias{cross_validation_glm}
 \title{Perform cross validation of simple GLM for SURVIVAL_STATUS, from a given feature set}
 \usage{
-cross_validation_glm(features, df, cancer_type = NULL, k = 3, seed = 12345)
+cross_validation_glm(features, df, cancer_type = NULL, k = 3,
+  seed = 12345)
 }
 \arguments{
 \item{features}{The features to use.}

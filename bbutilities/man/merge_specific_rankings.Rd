@@ -4,13 +4,8 @@
 \alias{merge_specific_rankings}
 \title{Combine various selected rankings.}
 \usage{
-merge_specific_rankings(
-  ttest_ordered,
-  glm_ordered,
-  anova_ordered,
-  mglm_ordered,
-  feature_names
-)
+merge_specific_rankings(ttest_ordered, glm_ordered, anova_ordered,
+  mglm_ordered, feature_names)
 }
 \arguments{
 \item{ttest_ordered}{As returned by stats.}

@@ -42,26 +42,18 @@ mean_cv_aucs3 <- sapply(1:40, function(j){return(stats3[[j]][1])})
 accs3 <- sapply(1:40, function(j){return(stats3[[j]][2])})
 specs3 <- sapply(1:40, function(j){return(stats3[[j]][4])})
 
-# Accuracy versus CV AUC
+# Accuracy and specificity versus CV AUC
 par(mfrow=c(1,3))
-plot(c(1:40), mean_cv_aucs1, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 1", ylab="CV AUCs (solid) and final AUC (circle)")
-points(cbind(1:40, accs1), pch=1)
+plot(c(1:40), mean_cv_aucs1, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 1", ylab="CV AUCs (black) and final AUC (blue) and final specificity (green)")
+points(cbind(1:40, accs1), pch=16, col="blue")
+points(cbind(1:40, specs1), pch=16, col="darkgreen")
 
-plot(c(1:40), mean_cv_aucs2, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 2", ylab="CV AUCs (solid) and final AUC (circle)")
-points(cbind(1:40, accs2), pch=1)
+plot(c(1:40), mean_cv_aucs2, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 2", ylab="CV AUCs (black) and final AUC (blue) and final specificity (green)")
+points(cbind(1:40, accs2), pch=16, col="blue")
+points(cbind(1:40, specs2), pch=16, col="darkgreen")
 
-plot(c(1:40), mean_cv_aucs3, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 3", ylab="CV AUCs (solid) and final AUC (circle)")
-points(cbind(1:40, accs3), pch=1)
-
-# Specificity versus CV AUC 
-par(mfrow=c(1,3))
-plot(c(1:40), mean_cv_aucs1, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 1", ylab="CV AUCs (solid) and final specificity (circle)")
-points(cbind(1:40, specs1), pch=1)
-
-plot(c(1:40), mean_cv_aucs2, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 2", ylab="CV AUCs (solid) and final specificity (circle)")
-points(cbind(1:40, specs2), pch=1)
-
-plot(c(1:40), mean_cv_aucs3, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 3", ylab="CV AUCs (solid) and final specificity (circle)")
-points(cbind(1:40, specs3), pch=1)
+plot(c(1:40), mean_cv_aucs3, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 3", ylab="CV AUCs (black) and final AUC (blue) and final specificity (green)")
+points(cbind(1:40, accs3), pch=16, col="blue")
+points(cbind(1:40, specs3), pch=16, col="darkgreen")
 
 
