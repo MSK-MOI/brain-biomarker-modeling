@@ -483,7 +483,7 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
     cat(paste0(bold("Features:"),"\n"))
     cat(paste(sanitize_R_prepends(final_features), collapse="\n"))
     cat("\n\n")
-    return(c(cv_mean_auc=cv_mean_auc, acc=acc))
+    return(c(cv_mean_auc=cv_mean_auc, acc=acc, sens=sens, spec=spec))
 }
 
 

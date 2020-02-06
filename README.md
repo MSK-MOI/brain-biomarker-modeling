@@ -18,7 +18,7 @@ Allen Tannenbaum
 
 Usage <a name="Usage"></a>
 -----
-First build and install the package by following the instructions below. Or use `source("bbutilities/utilities.R")`. Then make sure you've downloaded the data files from the [challenge website](https://precision.fda.gov/challenges/8).
+First build and install the package by following the instructions below. Or use `source("bbutilities/R/utilities.R")`. Then make sure you've downloaded the data files from the [challenge website](https://precision.fda.gov/challenges/8).
 
 In an R session:
 

@@ -18,27 +18,31 @@ ld3 <- pipeline(ld=ld3, merged_ranking=ld3[[3]], filenames3, threshold=7, cores=
 
 
 # Use the following to calculate a summary statistic of the cross-validation efficacy for multiple thresholds on the number of features.
-acc_and_mean_cv_aucs1 <- lapply(1:40, function(j) {
+stats1 <- lapply(1:40, function(j) {
         ld1 <- pipeline(ld=ld1, merged_ranking=ld1[[3]], filenames1, threshold=j, cores=6, write="subchallenge1")
         return(ld1[[4]])
     })
-mean_cv_aucs1 <- sapply(1:40, function(j){return(acc_and_mean_cv_aucs1[[j]][1])})
-accs1 <- sapply(1:40, function(j){return(acc_and_mean_cv_aucs1[[j]][2])})
+mean_cv_aucs1 <- sapply(1:40, function(j){return(stats1[[j]][1])})
+accs1 <- sapply(1:40, function(j){return(stats1[[j]][2])})
+specs1 <- sapply(1:40, function(j){return(stats1[[j]][4])})
 
-acc_and_mean_cv_aucs2 <- lapply(1:40, function(j) {
+stats2 <- lapply(1:40, function(j) {
         ld2 <- pipeline(ld=ld2, merged_ranking=ld2[[3]], filenames2, threshold=j, cores=6, write="subchallenge2")
         return(ld2[[4]])
     })
-mean_cv_aucs2 <- sapply(1:40, function(j){return(acc_and_mean_cv_aucs2[[j]][1])})
-accs2 <- sapply(1:40, function(j){return(acc_and_mean_cv_aucs2[[j]][2])})
+mean_cv_aucs2 <- sapply(1:40, function(j){return(stats2[[j]][1])})
+accs2 <- sapply(1:40, function(j){return(stats2[[j]][2])})
+specs2 <- sapply(1:40, function(j){return(stats2[[j]][4])})
 
-acc_and_mean_cv_aucs3 <- lapply(1:40, function(j) {
+stats3 <- lapply(1:40, function(j) {
         ld3 <- pipeline(ld=ld3, merged_ranking=ld3[[3]], filenames3, threshold=j, cores=6, write="subchallenge3")
         return(ld3[[4]])
     })
-mean_cv_aucs3 <- sapply(1:40, function(j){return(acc_and_mean_cv_aucs3[[j]][1])})
-accs3 <- sapply(1:40, function(j){return(acc_and_mean_cv_aucs3[[j]][2])})
+mean_cv_aucs3 <- sapply(1:40, function(j){return(stats3[[j]][1])})
+accs3 <- sapply(1:40, function(j){return(stats3[[j]][2])})
+specs3 <- sapply(1:40, function(j){return(stats3[[j]][4])})
 
+# Accuracy versus CV AUC
 par(mfrow=c(1,3))
 plot(c(1:40), mean_cv_aucs1, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 1", ylab="CV AUCs (solid) and final AUC (circle)")
 points(cbind(1:40, accs1), pch=1)
@@ -48,4 +52,16 @@ points(cbind(1:40, accs2), pch=1)
 
 plot(c(1:40), mean_cv_aucs3, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 3", ylab="CV AUCs (solid) and final AUC (circle)")
 points(cbind(1:40, accs3), pch=1)
+
+# Specificity versus CV AUC 
+par(mfrow=c(1,3))
+plot(c(1:40), mean_cv_aucs1, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 1", ylab="CV AUCs (solid) and final specificity (circle)")
+points(cbind(1:40, specs1), pch=1)
+
+plot(c(1:40), mean_cv_aucs2, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 2", ylab="CV AUCs (solid) and final specificity (circle)")
+points(cbind(1:40, specs2), pch=1)
+
+plot(c(1:40), mean_cv_aucs3, pch=16, xlim=c(0,40), ylim=c(0,1), xlab="threshold, challenge 3", ylab="CV AUCs (solid) and final specificity (circle)")
+points(cbind(1:40, specs3), pch=1)
+
 
