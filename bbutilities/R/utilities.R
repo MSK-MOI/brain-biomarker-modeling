@@ -34,15 +34,18 @@ library(crayon)
 #' @param filenames Vector of filenames: phenotype, outcome, and feature data.
 #' @param drop.zeros Whether to drop features that are identically zero.
 #' @param merge_extraneous Whether to merge UNKNOWN, MIXED, and UNCLASSIFIED into one category.
+#' @param has_label Whether to try to load in outcome data.
 #' @return list(df, feature_names). df$type, df$outcome, df$gene1, df$gene2, etc.
 #' @export
-load_data <- function(filenames, drop.zeros=FALSE, merge_extraneous=TRUE) {
+load_data <- function(filenames, drop.zeros=FALSE, merge_extraneous=TRUE, has_labels=TRUE) {
     categories <- read.csv(filenames[1], header=T, stringsAsFactors=F, sep="\t", row.names=1)
     type <- categories[,c("WHO_GRADING","CANCER_TYPE"),drop=F]
 
-    outcome <- read.table(filenames[2], header=T, stringsAsFactors=F)
-    rownames(outcome) <- outcome$PATIENTID
-    outcome <- outcome[,-1, drop=F]
+    if(has_labels) {
+        outcome <- read.table(filenames[2], header=T, stringsAsFactors=F)
+        rownames(outcome) <- outcome$PATIENTID
+        outcome <- outcome[,-1, drop=F]
+    }
 
     gv <- read.table(filenames[3], header=T, stringsAsFactors=F)
     rownames(gv) <- gv$PATIENTID
@@ -54,13 +57,24 @@ load_data <- function(filenames, drop.zeros=FALSE, merge_extraneous=TRUE) {
 
     feature_names <- colnames(gv)
 
-    if(!( all(rownames(type)==rownames(outcome)) && all(rownames(outcome)==rownames(gv)) )) {
-        stop("Patient IDs don't all match.")
+    if(has_labels) {
+        if(!( all(rownames(type)==rownames(outcome)) && all(rownames(outcome)==rownames(gv)) )) {
+            stop("Patient IDs don't all match.")
+        }
+    } else {
+        if(!( all(rownames(type)==rownames(gv)) )) {
+            stop("Patient IDs don't all match.")
+        }
     }
 
-    df <- data.frame(cbind(type$CANCER_TYPE, outcome$SURVIVAL_STATUS, gv, stringsAsFactors=F))
-    colnames(df)[1] <- "CANCER_TYPE"
-    colnames(df)[2] <- "SURVIVAL_STATUS"
+    if(has_labels) {
+        df <- data.frame(cbind(type$CANCER_TYPE, outcome$SURVIVAL_STATUS, gv, stringsAsFactors=F))
+        colnames(df)[1] <- "CANCER_TYPE"
+        colnames(df)[2] <- "SURVIVAL_STATUS"
+    } else {
+        df <- data.frame(cbind(type$CANCER_TYPE, gv, stringsAsFactors=F))
+        colnames(df)[1] <- "CANCER_TYPE"
+    }
 
     if(merge_extraneous) {
         extra <- c("UNKNOWN", "MIXED", "UNCLASSIFIED")
@@ -437,12 +451,23 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
             return(model_wrapper)
         })
 
+
+    # Save GLM models directly to file
+    all_models <- lapply(1:length(model_wrappers), function(j) { return(model_wrappers[[j]]$glm_model) })
+    cutoffs <- lapply(1:length(model_wrappers), function(j) { return(model_wrappers[[j]]$cutoff) })
+    names(all_models) <- types
+    names(cutoffs) <- types
+    file <- paste0(write, "_glm_models.rds")
+    saveRDS(list(all_models, cutoffs), file=file)
+
+
+    # Extract coefficients then save
     glm_coefficients <- data.frame(matrix(0, nrow=length(final_features)+2, ncol=length(types)))
     colnames(glm_coefficients) <- types
     for(j in 1:length(model_wrappers)) {
         coef_names <- names(model_wrappers[[j]]$coef)
         if(length(final_features)+1 != length(coef_names)) {
-            warning("Wrong number of coefficients produced by modeling process?")
+            warning("Wrong number of coefficients produced by modeling process?") # Also, maybe check that order of the various model_wrapper coefs is the same?
             model_wrappers[[j]]$coef <- rep(0, length(final_features) + 1)
             return(c(0,0,0,0,0))
         }
