@@ -1,0 +1,257 @@
+GLM model for  sc1_Phase1_GE_Phenotype.tsv , ... ( subchallenge1 )
+
+ASTROCYTOMA
+Accuracy           : 0.8909
+Sensitivity        : 0.9271
+Specificity        : 0.6429
+AUC                : 0.9152
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.78  0.86  0.92  0.85
+Sensitivity  0.94  0.97  0.97  0.96
+Specificity  0.00  0.33  0.00  0.11
+AUC          0.51  0.61  0.49  0.53
+
+GBM
+Accuracy           : 0.9444
+Sensitivity        : 1
+Specificity        : 0.3077
+AUC                : 0.795
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.93  0.87  0.94 0.914
+Sensitivity  1.00  0.98  0.98 0.987
+Specificity  0.20  0.00  0.00 0.067
+AUC          0.76  0.52  0.25 0.511
+
+UNKNOWN_MIXED_UNCLASSIFIED
+Accuracy           : 0.8276
+Sensitivity        : 0.878
+Specificity        : 0.7059
+AUC                : 0.8264
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.74  0.55  0.79  0.69
+Sensitivity  0.92  0.50  0.94  0.79
+Specificity  0.33  0.62  0.00  0.32
+AUC          0.44  0.55  0.58  0.52
+
+OLIGODENDROGLIOMA
+Accuracy           : 1
+Sensitivity        : 1
+Specificity        : 1
+AUC                : 1
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.88  0.88  0.73  0.83
+Sensitivity  0.93  0.93  0.80  0.89
+Specificity  0.00  0.00  0.60  0.20
+AUC          0.73  0.73  0.66  0.71
+
+Full model stats
+Contingency table  :       survival
+          0   1
+  FALSE  32  12
+  TRUE   19 314
+                *Actual survival status (0/1)
+                *Predicted death        (FALSE/TRUE)
+
+Accuracy              : 0.9178
+Sensitivity           : 0.9632
+Specificity           : 0.6275
+Mean AUC of submodels : 0.8842
+Mean AUC (submodel CV): 0.5695
+Mean accuracy (CV)    : 0.8222
+
+Features:
+TIMP1
+ZNF32
+ADM
+EIF3E
+CAVIN1
+PLAT
+HAUS4
+MYADM
+MYL9
+RRNAD1
+EMP3
+UBR5
+
+
+
+
+
+
+
+
+
+
+GLM model for  sc2_Phase1_CN_Phenotype.tsv , ... ( subchallenge2 )
+
+ASTROCYTOMA
+Accuracy           : 0.8571
+Sensitivity        : 0.75
+Specificity        : 1
+AUC                : 0.9167
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.78  0.70  0.78  0.75
+Sensitivity  1.00  0.67  0.50  0.72
+Specificity  0.33  0.75  1.00  0.69
+AUC          0.67  0.69  0.68  0.68
+
+GBM
+Accuracy           : 0.8966
+Sensitivity        : 0.9867
+Specificity        : 0.3333
+AUC                : 0.7417
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.83  0.86  0.90  0.86
+Sensitivity  0.96  0.96  1.00  0.97
+Specificity  0.20  0.00  0.25  0.15
+AUC          0.46  0.67  0.54  0.56
+
+UNKNOWN_MIXED_UNCLASSIFIED
+Accuracy           : 0.7692
+Sensitivity        : 0.8
+Specificity        : 0.7143
+AUC                : 0.75
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.77  0.62  0.54  0.64
+Sensitivity  0.78  0.89  0.86  0.84
+Specificity  0.75  0.00  0.17  0.31
+AUC          0.72  0.15  0.38  0.42
+
+OLIGODENDROGLIOMA
+Accuracy           : 0.85
+Sensitivity        : 0.8
+Specificity        : 1
+AUC                : 0.8667
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.43  0.57  0.83  0.61
+Sensitivity  0.40  0.60  0.80  0.60
+Specificity  0.50  0.50  1.00  0.67
+AUC          0.40  0.55  0.80  0.58
+
+Full model stats
+Contingency table  :       survival
+          0   1
+  FALSE  31  13
+  TRUE   12 118
+                *Actual survival status (0/1)
+                *Predicted death        (FALSE/TRUE)
+
+Accuracy              : 0.8563
+Sensitivity           : 0.9008
+Specificity           : 0.7209
+Mean AUC of submodels : 0.8188
+Mean AUC (submodel CV): 0.5582
+Mean accuracy (CV)    : 0.7165
+
+Features:
+19q13.13
+9p24.1
+1p13.3
+9p21.3
+1p36.21
+7p11.2
+10q23.32
+1p34.3
+
+
+
+
+
+
+
+
+
+GLM model for  sc3_Phase1_CN_GE_Phenotype.tsv , ... ( subchallenge3 )
+
+
+GBM
+Accuracy           : 0.925
+Sensitivity        : 0.9565
+Specificity        : 0.7273
+AUC                : 0.9051
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.74  0.89  0.92  0.85
+Sensitivity  0.90  0.96  0.96  0.94
+Specificity  0.17  0.00  0.67  0.28
+AUC          0.54  0.86  0.86  0.75
+
+UNKNOWN_MIXED_UNCLASSIFIED
+Accuracy           : 0.8718
+Sensitivity        : 0.9615
+Specificity        : 0.6923
+AUC                : 0.858
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.92  0.62  0.69  0.74
+Sensitivity  1.00  1.00  0.88  0.96
+Specificity  0.50  0.17  0.40  0.36
+AUC          0.64  0.43  0.64  0.57
+
+ASTROCYTOMA
+Accuracy           : 0.9655
+Sensitivity        : 0.9444
+Specificity        : 1
+AUC                : 0.9646
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy     0.80   0.8  0.89  0.83
+Sensitivity  0.78   1.0  0.75  0.84
+Specificity  1.00   0.6  1.00  0.87
+AUC          0.89   0.8  0.80  0.83
+
+OLIGODENDROGLIOMA
+Accuracy           : 1
+Sensitivity        : 1
+Specificity        : 1
+AUC                : 1
+
+Cross validation
+            Fold1 Fold2 Fold3 means
+Accuracy        1  0.86  0.60  0.82
+Sensitivity     1  1.00  0.75  0.92
+Specificity     1  0.50  0.00  0.50
+AUC             1  0.60  0.38  0.66
+
+Full model stats
+Contingency table  :       survival
+          0   1
+  FALSE  33   5
+  TRUE    7 121
+                *Actual survival status (0/1)
+                *Predicted death        (FALSE/TRUE)
+
+Accuracy              : 0.9277
+Sensitivity           : 0.9603
+Specificity           : 0.825
+Mean AUC of submodels : 0.9319
+Mean AUC (submodel CV): 0.7012
+Mean accuracy (CV)    : 0.811
+
+Features:
+ASB3
+CRTAC1
+PCMTD1
+RAB34
+SH3BGRL3
+ULBP2
+EIF3E
