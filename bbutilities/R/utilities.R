@@ -34,7 +34,7 @@ library(crayon)
 #' @param filenames Vector of filenames: phenotype, outcome, and feature data.
 #' @param drop.zeros Whether to drop features that are identically zero.
 #' @param merge_extraneous Whether to merge UNKNOWN, MIXED, and UNCLASSIFIED into one category.
-#' @param has_label Whether to try to load in outcome data.
+#' @param has_labels Whether to try to load in outcome data.
 #' @return list(df, feature_names). df$type, df$outcome, df$gene1, df$gene2, etc.
 #' @export
 load_data <- function(filenames, drop.zeros=FALSE, merge_extraneous=TRUE, has_labels=TRUE) {
@@ -464,7 +464,19 @@ build_and_report_final_model <- function(df, final_features, write, filenames) {
     # Extract coefficients then save
     glm_coefficients <- data.frame(matrix(0, nrow=length(final_features)+2, ncol=length(types)))
     colnames(glm_coefficients) <- types
+    coef_names_ref <- names(model_wrappers[[1]]$coef)
     for(j in 1:length(model_wrappers)) {
+        coef_names <- names(model_wrappers[[j]]$coef)
+        if(length(coef_names) != length(coef_names_ref)) {
+            print(coef_names)
+            print(coef_names_ref)
+            stop("Different number of coefficients returned by GLM modeling.")
+        }
+        if(!all(coef_names == coef_names_ref)) {
+            print(coef_names)
+            print(coef_names_ref)
+            stop("Coefficients as returned by GLM modeling in wrong order.")
+        }
         coef_names <- names(model_wrappers[[j]]$coef)
         if(length(final_features)+1 != length(coef_names)) {
             warning("Wrong number of coefficients produced by modeling process?") # Also, maybe check that order of the various model_wrapper coefs is the same?
